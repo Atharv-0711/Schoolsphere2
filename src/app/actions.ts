@@ -145,19 +145,91 @@ export const saveTeacherProfileAction = async (formData: FormData) => {
     );
   }
 
+  // Basic required fields
   const qualification = formData.get("qualification")?.toString();
   const experience = formData.get("experience")?.toString();
   const subjects = formData.get("subjects")?.toString();
   const gradeLevels = formData.get("grade_levels")?.toString();
   const bio = formData.get("bio")?.toString();
+  const professionalSummary =
+    formData.get("professional_summary")?.toString() || "";
 
   if (!qualification || !experience || !subjects || !gradeLevels || !bio) {
     return encodedRedirect(
       "error",
       "/teacher-profile",
-      "All fields are required",
+      "All required fields must be completed",
     );
   }
+
+  // Personal information
+  const personalInfo = {
+    full_name:
+      formData.get("full_name")?.toString() ||
+      user.user_metadata?.full_name ||
+      "",
+    phone: formData.get("phone")?.toString() || "",
+    address: formData.get("address")?.toString() || "",
+    city: formData.get("city")?.toString() || "",
+    state: formData.get("state")?.toString() || "",
+  };
+
+  // Educational qualifications
+  const educationCount = parseInt(
+    formData.get("education_count")?.toString() || "1",
+  );
+  const educationalQualifications = [];
+
+  for (let i = 0; i < educationCount; i++) {
+    const degree = formData.get(`education_degree_${i}`)?.toString();
+    const institution = formData.get(`education_institution_${i}`)?.toString();
+    const year = formData.get(`education_year_${i}`)?.toString();
+    const grade = formData.get(`education_grade_${i}`)?.toString();
+
+    if (degree && institution && year) {
+      educationalQualifications.push({
+        degree,
+        institution,
+        year,
+        grade: grade || "",
+      });
+    }
+  }
+
+  // Teaching certifications
+  const certCount = parseInt(
+    formData.get("certification_count")?.toString() || "1",
+  );
+  const teachingCertifications = [];
+
+  for (let i = 0; i < certCount; i++) {
+    const name = formData.get(`cert_name_${i}`)?.toString();
+    const authority = formData.get(`cert_authority_${i}`)?.toString();
+    const year = formData.get(`cert_year_${i}`)?.toString();
+
+    if (name && authority && year) {
+      teachingCertifications.push({
+        name,
+        authority,
+        year,
+      });
+    }
+  }
+
+  // Skills and methodologies
+  const skills = formData.get("skills")?.toString() || "";
+  const teachingMethodologies =
+    formData.get("teaching_methodologies")?.toString() || "";
+  const classroomManagement =
+    formData.get("classroom_management")?.toString() || "";
+  const lessonPlanning = formData.get("lesson_planning")?.toString() || "";
+  const techProficiency = formData.get("tech_proficiency")?.toString() || "";
+  const research = formData.get("research")?.toString() || "";
+  const workshops = formData.get("workshops")?.toString() || "";
+  const extracurricular = formData.get("extracurricular")?.toString() || "";
+  const awards = formData.get("awards")?.toString() || "";
+  const memberships = formData.get("memberships")?.toString() || "";
+  const references = formData.get("references")?.toString() || "";
 
   // Save teacher profile to database
   const { error: profileError } = await supabase
@@ -171,6 +243,40 @@ export const saveTeacherProfileAction = async (formData: FormData) => {
       bio,
       resume_url: "", // Empty string instead of actual URL
       created_at: new Date().toISOString(),
+      personal_information: personalInfo,
+      professional_summary: professionalSummary,
+      educational_qualifications: educationalQualifications,
+      teaching_certifications: teachingCertifications,
+      skills: skills ? skills.split(",").map((s) => s.trim()) : [],
+      teaching_methodologies: teachingMethodologies
+        ? teachingMethodologies.split(",").map((s) => s.trim())
+        : [],
+      classroom_management_strategies: classroomManagement
+        ? classroomManagement.split(",").map((s) => s.trim())
+        : [],
+      lesson_planning: lessonPlanning,
+      technological_proficiency: techProficiency
+        ? techProficiency.split(",").map((s) => s.trim())
+        : [],
+      research_publications: research
+        ? research.split("\n").map((s) => ({ title: s.trim() }))
+        : [],
+      workshops_training: workshops
+        ? workshops.split("\n").map((s) => ({ name: s.trim() }))
+        : [],
+      extracurricular_activities: extracurricular
+        ? extracurricular.split(",").map((s) => s.trim())
+        : [],
+      awards_recognitions: awards
+        ? awards.split("\n").map((s) => ({ title: s.trim() }))
+        : [],
+      professional_memberships: memberships
+        ? memberships.split("\n").map((s) => ({ organization: s.trim() }))
+        : [],
+      references: references
+        ? references.split("\n").map((s) => ({ details: s.trim() }))
+        : [],
+      looking_for_school: true,
     });
 
   if (profileError) {
@@ -182,7 +288,7 @@ export const saveTeacherProfileAction = async (formData: FormData) => {
     );
   }
 
-  return redirect("/teacher/vacancies");
+  return redirect("/teacher/school-selection");
 };
 
 export const forgotPasswordAction = async (formData: FormData) => {

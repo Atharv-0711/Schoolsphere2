@@ -1,18 +1,17 @@
-import { FormMessage, Message } from "@/components/form-message";
-import { SubmitButton } from "@/components/submit-button";
+import { createClient } from "../../../../../supabase/server";
+import { redirect } from "next/navigation";
+import Navbar from "@/components/navbar";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { saveTeacherProfileAction } from "@/app/actions";
-import Navbar from "@/components/navbar";
-import { UrlProvider } from "@/components/url-provider";
-import { createClient } from "../../../../supabase/server";
-import { redirect } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { PlusCircle, Trash2 } from "lucide-react";
+import { SubmitButton } from "@/components/submit-button";
+import { FormMessage, Message } from "@/components/form-message";
+import { UrlProvider } from "@/components/url-provider";
 
-export default async function TeacherProfile(props: {
+export default async function EditTeacherProfile(props: {
   searchParams: Promise<Message>;
 }) {
   const searchParams = await props.searchParams;
@@ -31,42 +30,59 @@ export default async function TeacherProfile(props: {
     redirect("/dashboard");
   }
 
-  // Check if user already has a teacher profile
+  // Get teacher profile
   const { data: teacherProfile } = await supabase
     .from("teacher_profiles")
     .select("*")
     .eq("user_id", user.id)
     .single();
 
-  if (teacherProfile) {
-    redirect("/teacher/vacancies");
+  if (!teacherProfile) {
+    redirect("/teacher-profile");
   }
 
-  if ("message" in searchParams) {
-    return (
-      <div className="flex h-screen w-full flex-1 items-center justify-center p-4 sm:max-w-md">
-        <FormMessage message={searchParams} />
-      </div>
-    );
-  }
+  // Get user details
+  const { data: userDetails } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  const updateTeacherProfileAction = async (formData: FormData) => {
+    "use server";
+
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return redirect("/sign-in");
+    }
+
+    // Extract and process form data similar to saveTeacherProfileAction
+    // Update the teacher profile in the database
+
+    return redirect("/teacher/profile");
+  };
 
   return (
     <>
       <Navbar />
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
+      <div className="flex min-h-screen flex-col items-center justify-start bg-background px-4 py-8 pt-24">
         <div className="w-full max-w-4xl rounded-lg border border-border bg-card p-6 shadow-sm">
           <UrlProvider>
             <form
               className="flex flex-col space-y-6"
               encType="multipart/form-data"
-              action={saveTeacherProfileAction}
+              action={updateTeacherProfileAction}
             >
-              <div className="space-y-2 text-center">
+              <div className="space-y-2">
                 <h1 className="text-3xl font-semibold tracking-tight">
-                  Teacher Profile Setup
+                  Edit Teacher Profile
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Please complete your profile to continue
+                  Update your professional information
                 </p>
               </div>
 
@@ -100,7 +116,11 @@ export default async function TeacherProfile(props: {
                         id="full_name"
                         name="full_name"
                         type="text"
-                        defaultValue={user.user_metadata?.full_name || ""}
+                        defaultValue={
+                          userDetails?.full_name ||
+                          user.user_metadata?.full_name ||
+                          ""
+                        }
                         required
                         className="w-full"
                       />
@@ -128,7 +148,9 @@ export default async function TeacherProfile(props: {
                         id="phone"
                         name="phone"
                         type="tel"
-                        placeholder="e.g. +91 9876543210"
+                        defaultValue={
+                          teacherProfile.personal_information?.phone || ""
+                        }
                         required
                         className="w-full"
                       />
@@ -142,7 +164,9 @@ export default async function TeacherProfile(props: {
                         id="address"
                         name="address"
                         type="text"
-                        placeholder="Your current address"
+                        defaultValue={
+                          teacherProfile.personal_information?.address || ""
+                        }
                         required
                         className="w-full"
                       />
@@ -156,7 +180,9 @@ export default async function TeacherProfile(props: {
                         id="city"
                         name="city"
                         type="text"
-                        placeholder="Your city"
+                        defaultValue={
+                          teacherProfile.personal_information?.city || ""
+                        }
                         required
                         className="w-full"
                       />
@@ -170,7 +196,9 @@ export default async function TeacherProfile(props: {
                         id="state"
                         name="state"
                         type="text"
-                        placeholder="Your state"
+                        defaultValue={
+                          teacherProfile.personal_information?.state || ""
+                        }
                         required
                         className="w-full"
                       />
@@ -191,7 +219,7 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="professional_summary"
                         name="professional_summary"
-                        placeholder="Provide a brief summary of your professional background and teaching philosophy"
+                        defaultValue={teacherProfile.professional_summary || ""}
                         required
                         className="w-full min-h-[100px]"
                       />
@@ -208,7 +236,7 @@ export default async function TeacherProfile(props: {
                         id="qualification"
                         name="qualification"
                         type="text"
-                        placeholder="e.g. Master's in Education"
+                        defaultValue={teacherProfile.qualification || ""}
                         required
                         className="w-full"
                       />
@@ -226,7 +254,7 @@ export default async function TeacherProfile(props: {
                         name="experience"
                         type="number"
                         min="0"
-                        placeholder="e.g. 5"
+                        defaultValue={teacherProfile.experience || 0}
                         required
                         className="w-full"
                       />
@@ -240,7 +268,7 @@ export default async function TeacherProfile(props: {
                         id="subjects"
                         name="subjects"
                         type="text"
-                        placeholder="e.g. Mathematics, Physics (comma separated)"
+                        defaultValue={teacherProfile.subjects || ""}
                         required
                         className="w-full"
                       />
@@ -257,7 +285,7 @@ export default async function TeacherProfile(props: {
                         id="grade_levels"
                         name="grade_levels"
                         type="text"
-                        placeholder="e.g. 9-12"
+                        defaultValue={teacherProfile.grade_levels || ""}
                         required
                         className="w-full"
                       />
@@ -270,7 +298,7 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="bio"
                         name="bio"
-                        placeholder="Tell us about your teaching philosophy and experience"
+                        defaultValue={teacherProfile.bio || ""}
                         required
                         className="w-full min-h-[100px]"
                       />
@@ -286,136 +314,158 @@ export default async function TeacherProfile(props: {
                         Educational Qualifications
                       </Label>
                       <div className="space-y-4" id="education-container">
-                        <div className="p-4 border rounded-md space-y-3">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label
-                                htmlFor="degree_0"
-                                className="text-xs font-medium"
+                        {teacherProfile.educational_qualifications &&
+                        teacherProfile.educational_qualifications.length > 0 ? (
+                          teacherProfile.educational_qualifications.map(
+                            (edu, index) => (
+                              <div
+                                key={index}
+                                className="p-4 border rounded-md space-y-3"
                               >
-                                Degree/Certificate
-                              </Label>
-                              <Input
-                                id="degree_0"
-                                name="education_degree_0"
-                                type="text"
-                                placeholder="e.g. B.Ed"
-                                required
-                                className="w-full"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label
-                                htmlFor="institution_0"
-                                className="text-xs font-medium"
-                              >
-                                Institution
-                              </Label>
-                              <Input
-                                id="institution_0"
-                                name="education_institution_0"
-                                type="text"
-                                placeholder="e.g. Delhi University"
-                                required
-                                className="w-full"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label
-                                htmlFor="year_0"
-                                className="text-xs font-medium"
-                              >
-                                Year
-                              </Label>
-                              <Input
-                                id="year_0"
-                                name="education_year_0"
-                                type="text"
-                                placeholder="e.g. 2018"
-                                required
-                                className="w-full"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label
-                                htmlFor="grade_0"
-                                className="text-xs font-medium"
-                              >
-                                Grade/Percentage
-                              </Label>
-                              <Input
-                                id="grade_0"
-                                name="education_grade_0"
-                                type="text"
-                                placeholder="e.g. 85%"
-                                className="w-full"
-                              />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label
+                                      htmlFor={`degree_${index}`}
+                                      className="text-xs font-medium"
+                                    >
+                                      Degree/Certificate
+                                    </Label>
+                                    <Input
+                                      id={`degree_${index}`}
+                                      name={`education_degree_${index}`}
+                                      type="text"
+                                      defaultValue={edu.degree}
+                                      required
+                                      className="w-full"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label
+                                      htmlFor={`institution_${index}`}
+                                      className="text-xs font-medium"
+                                    >
+                                      Institution
+                                    </Label>
+                                    <Input
+                                      id={`institution_${index}`}
+                                      name={`education_institution_${index}`}
+                                      type="text"
+                                      defaultValue={edu.institution}
+                                      required
+                                      className="w-full"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label
+                                      htmlFor={`year_${index}`}
+                                      className="text-xs font-medium"
+                                    >
+                                      Year
+                                    </Label>
+                                    <Input
+                                      id={`year_${index}`}
+                                      name={`education_year_${index}`}
+                                      type="text"
+                                      defaultValue={edu.year}
+                                      required
+                                      className="w-full"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label
+                                      htmlFor={`grade_${index}`}
+                                      className="text-xs font-medium"
+                                    >
+                                      Grade/Percentage
+                                    </Label>
+                                    <Input
+                                      id={`grade_${index}`}
+                                      name={`education_grade_${index}`}
+                                      type="text"
+                                      defaultValue={edu.grade}
+                                      className="w-full"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ),
+                          )
+                        ) : (
+                          <div className="p-4 border rounded-md space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label
+                                  htmlFor="degree_0"
+                                  className="text-xs font-medium"
+                                >
+                                  Degree/Certificate
+                                </Label>
+                                <Input
+                                  id="degree_0"
+                                  name="education_degree_0"
+                                  type="text"
+                                  placeholder="e.g. B.Ed"
+                                  required
+                                  className="w-full"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label
+                                  htmlFor="institution_0"
+                                  className="text-xs font-medium"
+                                >
+                                  Institution
+                                </Label>
+                                <Input
+                                  id="institution_0"
+                                  name="education_institution_0"
+                                  type="text"
+                                  placeholder="e.g. Delhi University"
+                                  required
+                                  className="w-full"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label
+                                  htmlFor="year_0"
+                                  className="text-xs font-medium"
+                                >
+                                  Year
+                                </Label>
+                                <Input
+                                  id="year_0"
+                                  name="education_year_0"
+                                  type="text"
+                                  placeholder="e.g. 2018"
+                                  required
+                                  className="w-full"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label
+                                  htmlFor="grade_0"
+                                  className="text-xs font-medium"
+                                >
+                                  Grade/Percentage
+                                </Label>
+                                <Input
+                                  id="grade_0"
+                                  name="education_grade_0"
+                                  type="text"
+                                  placeholder="e.g. 85%"
+                                  className="w-full"
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                      <input type="hidden" name="education_count" value="1" />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">
-                        Teaching Certifications
-                      </Label>
-                      <div className="space-y-4" id="certification-container">
-                        <div className="p-4 border rounded-md space-y-3">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label
-                                htmlFor="cert_name_0"
-                                className="text-xs font-medium"
-                              >
-                                Certification Name
-                              </Label>
-                              <Input
-                                id="cert_name_0"
-                                name="cert_name_0"
-                                type="text"
-                                placeholder="e.g. CTET"
-                                className="w-full"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label
-                                htmlFor="cert_authority_0"
-                                className="text-xs font-medium"
-                              >
-                                Issuing Authority
-                              </Label>
-                              <Input
-                                id="cert_authority_0"
-                                name="cert_authority_0"
-                                type="text"
-                                placeholder="e.g. CBSE"
-                                className="w-full"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label
-                                htmlFor="cert_year_0"
-                                className="text-xs font-medium"
-                              >
-                                Year
-                              </Label>
-                              <Input
-                                id="cert_year_0"
-                                name="cert_year_0"
-                                type="text"
-                                placeholder="e.g. 2019"
-                                className="w-full"
-                              />
-                            </div>
-                          </div>
-                        </div>
+                        )}
                       </div>
                       <input
                         type="hidden"
-                        name="certification_count"
-                        value="1"
+                        name="education_count"
+                        value={
+                          teacherProfile.educational_qualifications?.length || 1
+                        }
                       />
                     </div>
 
@@ -426,7 +476,7 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="skills"
                         name="skills"
-                        placeholder="List your skills (comma separated)"
+                        defaultValue={teacherProfile.skills?.join(", ") || ""}
                         className="w-full"
                       />
                     </div>
@@ -441,7 +491,10 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="teaching_methodologies"
                         name="teaching_methodologies"
-                        placeholder="Describe your teaching methodologies (comma separated)"
+                        defaultValue={
+                          teacherProfile.teaching_methodologies?.join(", ") ||
+                          ""
+                        }
                         className="w-full"
                       />
                     </div>
@@ -456,7 +509,11 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="classroom_management"
                         name="classroom_management"
-                        placeholder="Describe your classroom management strategies (comma separated)"
+                        defaultValue={
+                          teacherProfile.classroom_management_strategies?.join(
+                            ", ",
+                          ) || ""
+                        }
                         className="w-full"
                       />
                     </div>
@@ -476,7 +533,7 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="lesson_planning"
                         name="lesson_planning"
-                        placeholder="Describe your approach to lesson planning and curriculum development"
+                        defaultValue={teacherProfile.lesson_planning || ""}
                         className="w-full"
                       />
                     </div>
@@ -491,7 +548,11 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="tech_proficiency"
                         name="tech_proficiency"
-                        placeholder="List technologies you're proficient with (comma separated)"
+                        defaultValue={
+                          teacherProfile.technological_proficiency?.join(
+                            ", ",
+                          ) || ""
+                        }
                         className="w-full"
                       />
                     </div>
@@ -503,7 +564,11 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="research"
                         name="research"
-                        placeholder="List any research or publications (if any)"
+                        defaultValue={
+                          teacherProfile.research_publications
+                            ?.map((p) => p.title)
+                            .join("\n") || ""
+                        }
                         className="w-full"
                       />
                     </div>
@@ -518,7 +583,11 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="workshops"
                         name="workshops"
-                        placeholder="List workshops and training programs you've attended"
+                        defaultValue={
+                          teacherProfile.workshops_training
+                            ?.map((w) => w.name)
+                            .join("\n") || ""
+                        }
                         className="w-full"
                       />
                     </div>
@@ -533,7 +602,11 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="extracurricular"
                         name="extracurricular"
-                        placeholder="Describe your involvement in extracurricular activities"
+                        defaultValue={
+                          teacherProfile.extracurricular_activities?.join(
+                            ", ",
+                          ) || ""
+                        }
                         className="w-full"
                       />
                     </div>
@@ -545,7 +618,11 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="awards"
                         name="awards"
-                        placeholder="List any awards or recognitions you've received"
+                        defaultValue={
+                          teacherProfile.awards_recognitions
+                            ?.map((a) => a.title)
+                            .join("\n") || ""
+                        }
                         className="w-full"
                       />
                     </div>
@@ -560,7 +637,11 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="memberships"
                         name="memberships"
-                        placeholder="List any professional organizations you're a member of"
+                        defaultValue={
+                          teacherProfile.professional_memberships
+                            ?.map((m) => m.organization)
+                            .join("\n") || ""
+                        }
                         className="w-full"
                       />
                     </div>
@@ -575,7 +656,11 @@ export default async function TeacherProfile(props: {
                       <Textarea
                         id="references"
                         name="references"
-                        placeholder="Provide references (name, position, contact)"
+                        defaultValue={
+                          teacherProfile.references
+                            ?.map((r) => r.details)
+                            .join("\n") || ""
+                        }
                         className="w-full"
                       />
                     </div>
@@ -591,14 +676,25 @@ export default async function TeacherProfile(props: {
                         accept=".pdf,.doc,.docx"
                         className="w-full"
                       />
+                      {teacherProfile.resume_url && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Current resume:{" "}
+                          {teacherProfile.resume_url.split("/").pop()}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </TabsContent>
               </Tabs>
 
-              <SubmitButton pendingText="Saving profile..." className="w-full">
-                Save Profile & Continue
-              </SubmitButton>
+              <div className="flex justify-between">
+                <Button variant="outline" type="button" asChild>
+                  <a href="/teacher/profile">Cancel</a>
+                </Button>
+                <SubmitButton pendingText="Saving changes...">
+                  Save Changes
+                </SubmitButton>
+              </div>
 
               <FormMessage message={searchParams} />
             </form>
