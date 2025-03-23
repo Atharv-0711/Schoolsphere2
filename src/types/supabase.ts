@@ -9,6 +9,131 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      meetings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          duration_minutes: number
+          id: string
+          meeting_date: string
+          meeting_link: string | null
+          parent_id: string
+          status: string
+          student_id: string | null
+          teacher_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          meeting_date: string
+          meeting_link?: string | null
+          parent_id: string
+          status?: string
+          student_id?: string | null
+          teacher_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          meeting_date?: string
+          meeting_link?: string | null
+          parent_id?: string
+          status?: string
+          student_id?: string | null
+          teacher_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          parent_message_id: string | null
+          read: boolean | null
+          recipient_id: string
+          sender_id: string
+          subject: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          parent_message_id?: string | null
+          read?: boolean | null
+          recipient_id: string
+          sender_id: string
+          subject: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          parent_message_id?: string | null
+          read?: boolean | null
+          recipient_id?: string
+          sender_id?: string
+          subject?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_parent_message_id_fkey"
+            columns: ["parent_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_vacancies: {
         Row: {
           application_deadline: string

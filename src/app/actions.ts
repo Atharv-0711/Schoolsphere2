@@ -421,6 +421,260 @@ export const saveSchoolDetailsAction = async (formData: FormData) => {
   return redirect("/dashboard");
 };
 
+export const sendMessageAction = async (formData: FormData) => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return encodedRedirect("error", "/sign-in", "You must be signed in");
+  }
+
+  const recipientId = formData.get("recipient_id")?.toString();
+  const subject = formData.get("subject")?.toString();
+  const content = formData.get("content")?.toString();
+
+  if (!recipientId || !subject || !content) {
+    return encodedRedirect("error", "/messages/new", "All fields are required");
+  }
+
+  // Save message to database
+  const { error } = await supabase.from("messages").insert({
+    sender_id: user.id,
+    recipient_id: recipientId,
+    subject,
+    content,
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error("Error sending message:", error);
+    return encodedRedirect("error", "/messages/new", "Failed to send message");
+  }
+
+  return redirect("/messages");
+};
+
+export const replyToMessageAction = async (formData: FormData) => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return encodedRedirect("error", "/sign-in", "You must be signed in");
+  }
+
+  const parentMessageId = formData.get("parent_message_id")?.toString();
+  const recipientId = formData.get("recipient_id")?.toString();
+  const subject = formData.get("subject")?.toString();
+  const content = formData.get("content")?.toString();
+
+  if (!parentMessageId || !recipientId || !subject || !content) {
+    return encodedRedirect(
+      "error",
+      `/messages/${parentMessageId}`,
+      "All fields are required",
+    );
+  }
+
+  // Save reply to database
+  const { error } = await supabase.from("messages").insert({
+    sender_id: user.id,
+    recipient_id: recipientId,
+    subject,
+    content,
+    parent_message_id: parentMessageId,
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error("Error sending reply:", error);
+    return encodedRedirect(
+      "error",
+      `/messages/${parentMessageId}`,
+      "Failed to send reply",
+    );
+  }
+
+  return redirect(`/messages/${parentMessageId}`);
+};
+
+export const markMessageAsReadAction = async (messageId: string) => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return;
+  }
+
+  // Mark message as read
+  await supabase
+    .from("messages")
+    .update({ read: true })
+    .eq("id", messageId)
+    .eq("recipient_id", user.id);
+};
+
+export const scheduleMeetingAction = async (formData: FormData) => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return encodedRedirect("error", "/sign-in", "You must be signed in");
+  }
+
+  // Check if user is a teacher
+  if (user.user_metadata?.user_role !== "teacher") {
+    return encodedRedirect(
+      "error",
+      "/meetings",
+      "Only teachers can schedule meetings",
+    );
+  }
+
+  const parentId = formData.get("parent_id")?.toString();
+  const studentId = formData.get("student_id")?.toString() || null;
+  const title = formData.get("title")?.toString();
+  const meetingDate = formData.get("meeting_date")?.toString();
+  const durationMinutes = parseInt(
+    formData.get("duration_minutes")?.toString() || "30",
+  );
+  const meetingLink = formData.get("meeting_link")?.toString() || null;
+  const description = formData.get("description")?.toString() || null;
+
+  if (!parentId || !title || !meetingDate) {
+    return encodedRedirect(
+      "error",
+      "/meetings/schedule",
+      "Required fields are missing",
+    );
+  }
+
+  // Save meeting to database
+  const { error } = await supabase.from("meetings").insert({
+    teacher_id: user.id,
+    parent_id: parentId,
+    student_id: studentId,
+    title,
+    description,
+    meeting_date: meetingDate,
+    duration_minutes: durationMinutes,
+    meeting_link: meetingLink,
+    status: "scheduled",
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error("Error scheduling meeting:", error);
+    return encodedRedirect(
+      "error",
+      "/meetings/schedule",
+      "Failed to schedule meeting",
+    );
+  }
+
+  // Send notification message to parent
+  await supabase.from("messages").insert({
+    sender_id: user.id,
+    recipient_id: parentId,
+    subject: `Meeting Invitation: ${title}`,
+    content: `I'd like to invite you to a meeting on ${new Date(meetingDate).toLocaleString()}.
+
+${description || ""}
+
+Please confirm your attendance by visiting the meetings page.`,
+    created_at: new Date().toISOString(),
+  });
+
+  return redirect("/meetings");
+};
+
+export const updateMeetingStatusAction = async (formData: FormData) => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return redirect("/sign-in");
+  }
+
+  const meetingId = formData.get("meeting_id")?.toString();
+  const status = formData.get("status")?.toString();
+
+  if (!meetingId || !status) {
+    return redirect("/meetings");
+  }
+
+  // Get the meeting to check permissions
+  const { data: meeting } = await supabase
+    .from("meetings")
+    .select("*")
+    .eq("id", meetingId)
+    .single();
+
+  if (!meeting) {
+    return redirect("/meetings");
+  }
+
+  // Check if user is authorized to update this meeting
+  if (meeting.teacher_id !== user.id && meeting.parent_id !== user.id) {
+    return redirect("/meetings");
+  }
+
+  // Update meeting status
+  const { error } = await supabase
+    .from("meetings")
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", meetingId);
+
+  if (error) {
+    console.error("Error updating meeting status:", error);
+  }
+
+  // Send notification message to the other party
+  const recipientId =
+    user.id === meeting.teacher_id ? meeting.parent_id : meeting.teacher_id;
+  let messageSubject = "";
+  let messageContent = "";
+
+  switch (status) {
+    case "confirmed":
+      messageSubject = `Meeting Confirmed: ${meeting.title}`;
+      messageContent = `I have confirmed my attendance for our meeting on ${new Date(meeting.meeting_date).toLocaleString()}.`;
+      break;
+    case "cancelled":
+      messageSubject = `Meeting Cancelled: ${meeting.title}`;
+      messageContent = `I regret to inform you that I need to cancel our meeting scheduled for ${new Date(meeting.meeting_date).toLocaleString()}.`;
+      break;
+    case "completed":
+      messageSubject = `Meeting Completed: ${meeting.title}`;
+      messageContent = `I've marked our meeting from ${new Date(meeting.meeting_date).toLocaleString()} as completed. Thank you for your time.`;
+      break;
+  }
+
+  if (messageSubject && messageContent) {
+    await supabase.from("messages").insert({
+      sender_id: user.id,
+      recipient_id: recipientId,
+      subject: messageSubject,
+      content: messageContent,
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  return redirect(`/meetings/${meetingId}`);
+};
+
 export const signOutAction = async () => {
   const supabase = await createClient();
   await supabase.auth.signOut();
