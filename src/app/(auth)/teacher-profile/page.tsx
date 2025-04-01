@@ -11,8 +11,9 @@ import { UrlProvider } from "@/components/url-provider";
 import { redirect } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { AlertCircle, CheckCircle, PlusCircle, Trash2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function TeacherProfile({
   searchParams,
@@ -27,11 +28,31 @@ export default function TeacherProfile({
     education: {},
     additional: {},
   });
+  const [activeTab, setActiveTab] = useState("personal");
+  const [savingSection, setSavingSection] = useState<string | null>(null);
+  const [sectionStatus, setSectionStatus] = useState<{
+    [key: string]: { status: "success" | "error" | null; message: string };
+  }>({
+    personal: { status: null, message: "" },
+    professional: { status: null, message: "" },
+    education: { status: null, message: "" },
+    additional: { status: null, message: "" },
+  });
+  const [existingProfile, setExistingProfile] = useState<any>(null);
 
+  // Debounce function to limit API calls
+  const debounce = (func: Function, delay: number) => {
+    let timer: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => func(...args), delay);
+    };
+  };
+
+  // Load user data and check if profile exists
   useEffect(() => {
     async function loadUserData() {
       try {
-        // Import createBrowserClient at the top of the file
         const { createBrowserClient } = await import("@supabase/ssr");
         const supabase = createBrowserClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -57,8 +78,113 @@ export default function TeacherProfile({
           .single();
 
         if (teacherProfile) {
-          window.location.href = "/teacher/vacancies";
-          return;
+          // If profile exists but is incomplete, load it for editing
+          const requiredFields = [
+            "qualification",
+            "experience",
+            "subjects",
+            "grade_levels",
+            "bio",
+            "professional_summary",
+          ];
+
+          const personalInfoFields = teacherProfile.personal_information || {};
+          const missingPersonalFields = [
+            "full_name",
+            "phone",
+            "address",
+            "city",
+            "state",
+          ].some((field) => !personalInfoFields[field]);
+
+          const hasAllRequiredFields =
+            requiredFields.every((field) => teacherProfile[field]) &&
+            !missingPersonalFields;
+
+          if (hasAllRequiredFields) {
+            window.location.href = "/teacher/vacancies";
+            return;
+          }
+
+          // Load existing profile data
+          setExistingProfile(teacherProfile);
+
+          // Initialize form data with existing profile
+          const initialFormData = {
+            personal: teacherProfile.personal_information || {},
+            professional: {
+              professional_summary: teacherProfile.professional_summary || "",
+              qualification: teacherProfile.qualification || "",
+              experience: teacherProfile.experience || "",
+              subjects: teacherProfile.subjects || "",
+              grade_levels: teacherProfile.grade_levels || "",
+              bio: teacherProfile.bio || "",
+            },
+            education: {
+              skills: teacherProfile.skills?.join(", ") || "",
+              teaching_methodologies:
+                teacherProfile.teaching_methodologies?.join(", ") || "",
+              classroom_management:
+                teacherProfile.classroom_management_strategies?.join(", ") ||
+                "",
+            },
+            additional: {
+              lesson_planning: teacherProfile.lesson_planning || "",
+              tech_proficiency:
+                teacherProfile.technological_proficiency?.join(", ") || "",
+              research:
+                teacherProfile.research_publications
+                  ?.map((p: any) => p.title)
+                  .join("\n") || "",
+              workshops:
+                teacherProfile.workshops_training
+                  ?.map((w: any) => w.name)
+                  .join("\n") || "",
+              extracurricular:
+                teacherProfile.extracurricular_activities?.join(", ") || "",
+              awards:
+                teacherProfile.awards_recognitions
+                  ?.map((a: any) => a.title)
+                  .join("\n") || "",
+              memberships:
+                teacherProfile.professional_memberships
+                  ?.map((m: any) => m.organization)
+                  .join("\n") || "",
+              references:
+                teacherProfile.references
+                  ?.map((r: any) => r.details)
+                  .join("\n") || "",
+            },
+          };
+
+          // Add education qualifications
+          if (teacherProfile.educational_qualifications?.length > 0) {
+            teacherProfile.educational_qualifications.forEach(
+              (edu: any, index: number) => {
+                initialFormData.education[`degree_${index}`] = edu.degree || "";
+                initialFormData.education[`institution_${index}`] =
+                  edu.institution || "";
+                initialFormData.education[`year_${index}`] = edu.year || "";
+                initialFormData.education[`grade_${index}`] = edu.grade || "";
+              },
+            );
+          }
+
+          // Add certifications
+          if (teacherProfile.teaching_certifications?.length > 0) {
+            teacherProfile.teaching_certifications.forEach(
+              (cert: any, index: number) => {
+                initialFormData.education[`cert_name_${index}`] =
+                  cert.name || "";
+                initialFormData.education[`cert_authority_${index}`] =
+                  cert.authority || "";
+                initialFormData.education[`cert_year_${index}`] =
+                  cert.year || "";
+              },
+            );
+          }
+
+          setFormData(initialFormData);
         }
 
         setUser(data.user);
@@ -71,14 +197,82 @@ export default function TeacherProfile({
     loadUserData();
   }, []);
 
-  const handleInputChange = (section, field, value) => {
-    setFormData((prev) => ({
+  // Save section data to API
+  const saveSection = useCallback(async (section: string, sectionData: any) => {
+    setSavingSection(section);
+    setSectionStatus((prev) => ({
       ...prev,
-      [section]: {
-        ...prev[section],
-        [field]: value,
-      },
+      [section]: { status: null, message: "Saving..." },
     }));
+
+    try {
+      const response = await fetch("/api/teacher-profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          section,
+          formData: sectionData,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSectionStatus((prev) => ({
+          ...prev,
+          [section]: { status: "success", message: "Saved successfully" },
+        }));
+      } else {
+        setSectionStatus((prev) => ({
+          ...prev,
+          [section]: {
+            status: "error",
+            message: data.error || "Failed to save",
+          },
+        }));
+      }
+    } catch (error) {
+      console.error(`Error saving ${section} section:`, error);
+      setSectionStatus((prev) => ({
+        ...prev,
+        [section]: { status: "error", message: "Network error" },
+      }));
+    } finally {
+      setSavingSection(null);
+    }
+  }, []);
+
+  // Debounced save function
+  const debouncedSave = useCallback(
+    debounce((section: string, sectionData: any) => {
+      saveSection(section, sectionData);
+    }, 1000),
+    [saveSection],
+  );
+
+  // Handle input change and trigger save
+  const handleInputChange = (section: string, field: string, value: any) => {
+    setFormData((prev) => {
+      const updatedSection = {
+        ...prev[section as keyof typeof prev],
+        [field]: value,
+      };
+
+      // Trigger debounced save
+      debouncedSave(section, updatedSection);
+
+      return {
+        ...prev,
+        [section]: updatedSection,
+      };
+    });
+  };
+
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
   };
 
   if (loading) {
@@ -120,21 +314,53 @@ export default function TeacherProfile({
                 </p>
               </div>
 
-              <Tabs defaultValue="personal" className="w-full">
+              <Tabs
+                value={activeTab}
+                onValueChange={handleTabChange}
+                className="w-full"
+              >
                 <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
                   <TabsTrigger value="personal">
                     Personal Information
+                    {sectionStatus.personal.status === "success" && (
+                      <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
+                    )}
                   </TabsTrigger>
                   <TabsTrigger value="professional">
                     Professional Details
+                    {sectionStatus.professional.status === "success" && (
+                      <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
+                    )}
                   </TabsTrigger>
                   <TabsTrigger value="education">
                     Education & Skills
+                    {sectionStatus.education.status === "success" && (
+                      <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
+                    )}
                   </TabsTrigger>
                   <TabsTrigger value="additional">
                     Additional Information
+                    {sectionStatus.additional.status === "success" && (
+                      <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
+                    )}
                   </TabsTrigger>
                 </TabsList>
+
+                {/* Status message for current section */}
+                {sectionStatus[activeTab].status && (
+                  <Alert
+                    className={`mt-4 ${sectionStatus[activeTab].status === "success" ? "bg-green-50" : "bg-red-50"}`}
+                  >
+                    {sectionStatus[activeTab].status === "success" ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                    )}
+                    <AlertDescription>
+                      {sectionStatus[activeTab].message}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {/* Personal Information Tab */}
                 <TabsContent value="personal" className="space-y-6 pt-4">

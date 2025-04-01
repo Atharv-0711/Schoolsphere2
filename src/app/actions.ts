@@ -153,25 +153,74 @@ export const saveTeacherProfileAction = async (formData: FormData) => {
   const bio = formData.get("bio")?.toString();
   const professionalSummary =
     formData.get("professional_summary")?.toString() || "";
+  const fullName =
+    formData.get("full_name")?.toString() ||
+    user.user_metadata?.full_name ||
+    "";
+  const phone = formData.get("phone")?.toString() || "";
+  const address = formData.get("address")?.toString() || "";
+  const city = formData.get("city")?.toString() || "";
+  const state = formData.get("state")?.toString() || "";
 
-  if (!qualification || !experience || !subjects || !gradeLevels || !bio) {
+  // Log form data for debugging
+  console.log("Form data validation:", {
+    qualification,
+    experience,
+    subjects,
+    gradeLevels,
+    bio,
+    professionalSummary,
+    fullName,
+    phone,
+    address,
+    city,
+    state,
+  });
+
+  // Check if all required fields are present
+  if (
+    !qualification ||
+    !experience ||
+    !subjects ||
+    !gradeLevels ||
+    !bio ||
+    !professionalSummary ||
+    !fullName ||
+    !phone ||
+    !address ||
+    !city ||
+    !state
+  ) {
+    // Log which fields are missing
+    const missingFields = [];
+    if (!qualification) missingFields.push("qualification");
+    if (!experience) missingFields.push("experience");
+    if (!subjects) missingFields.push("subjects");
+    if (!gradeLevels) missingFields.push("grade_levels");
+    if (!bio) missingFields.push("bio");
+    if (!professionalSummary) missingFields.push("professional_summary");
+    if (!fullName) missingFields.push("full_name");
+    if (!phone) missingFields.push("phone");
+    if (!address) missingFields.push("address");
+    if (!city) missingFields.push("city");
+    if (!state) missingFields.push("state");
+
+    console.error("Missing fields:", missingFields);
+
     return encodedRedirect(
       "error",
       "/teacher-profile",
-      "All required fields must be completed",
+      `Missing required fields: ${missingFields.join(", ")}`,
     );
   }
 
   // Personal information
   const personalInfo = {
-    full_name:
-      formData.get("full_name")?.toString() ||
-      user.user_metadata?.full_name ||
-      "",
-    phone: formData.get("phone")?.toString() || "",
-    address: formData.get("address")?.toString() || "",
-    city: formData.get("city")?.toString() || "",
-    state: formData.get("state")?.toString() || "",
+    full_name: fullName,
+    phone,
+    address,
+    city,
+    state,
   };
 
   // Educational qualifications
@@ -284,7 +333,7 @@ export const saveTeacherProfileAction = async (formData: FormData) => {
     return encodedRedirect(
       "error",
       "/teacher-profile",
-      "Failed to save profile",
+      "Failed to save profile: " + profileError.message,
     );
   }
 
