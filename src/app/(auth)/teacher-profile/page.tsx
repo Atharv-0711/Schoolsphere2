@@ -1,45 +1,95 @@
+"use client";
+
 import { FormMessage, Message } from "@/components/form-message";
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { saveTeacherProfileAction } from "@/app/actions";
-import Navbar from "@/components/navbar";
+import ClientNavbar from "@/components/client-navbar";
 import { UrlProvider } from "@/components/url-provider";
-import { createClient } from "../../../../supabase/server";
 import { redirect } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
 
-export default async function TeacherProfile(props: {
-  searchParams: Promise<Message>;
+export default function TeacherProfile({
+  searchParams,
+}: {
+  searchParams: Message;
 }) {
-  const searchParams = await props.searchParams;
-  const supabase = await createClient();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    personal: {},
+    professional: {},
+    education: {},
+    additional: {},
+  });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  useEffect(() => {
+    async function loadUserData() {
+      try {
+        // Import createBrowserClient at the top of the file
+        const { createBrowserClient } = await import("@supabase/ssr");
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        );
+        const { data } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/sign-in");
-  }
+        if (!data.user) {
+          window.location.href = "/sign-in";
+          return;
+        }
 
-  // Check if user is a teacher
-  if (user.user_metadata?.user_role !== "teacher") {
-    redirect("/dashboard");
-  }
+        if (data.user.user_metadata?.user_role !== "teacher") {
+          window.location.href = "/dashboard";
+          return;
+        }
 
-  // Check if user already has a teacher profile
-  const { data: teacherProfile } = await supabase
-    .from("teacher_profiles")
-    .select("*")
-    .eq("user_id", user.id)
-    .single();
+        // Check if user already has a teacher profile
+        const { data: teacherProfile } = await supabase
+          .from("teacher_profiles")
+          .select("*")
+          .eq("user_id", data.user.id)
+          .single();
 
-  if (teacherProfile) {
-    redirect("/teacher/vacancies");
+        if (teacherProfile) {
+          window.location.href = "/teacher/vacancies";
+          return;
+        }
+
+        setUser(data.user);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error loading user data:", error);
+      }
+    }
+
+    loadUserData();
+  }, []);
+
+  const handleInputChange = (section, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value,
+      },
+    }));
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full flex-1 items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if ("message" in searchParams) {
@@ -52,7 +102,7 @@ export default async function TeacherProfile(props: {
 
   return (
     <>
-      <Navbar />
+      <ClientNavbar />
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
         <div className="w-full max-w-4xl rounded-lg border border-border bg-card p-6 shadow-sm">
           <UrlProvider>
@@ -100,7 +150,18 @@ export default async function TeacherProfile(props: {
                         id="full_name"
                         name="full_name"
                         type="text"
-                        defaultValue={user.user_metadata?.full_name || ""}
+                        value={
+                          formData.personal.full_name ||
+                          user?.user_metadata?.full_name ||
+                          ""
+                        }
+                        onChange={(e) =>
+                          handleInputChange(
+                            "personal",
+                            "full_name",
+                            e.target.value,
+                          )
+                        }
                         required
                         className="w-full"
                       />
@@ -114,7 +175,7 @@ export default async function TeacherProfile(props: {
                         id="email"
                         name="email"
                         type="email"
-                        defaultValue={user.email || ""}
+                        defaultValue={user?.email || ""}
                         readOnly
                         className="w-full bg-muted"
                       />
@@ -129,6 +190,10 @@ export default async function TeacherProfile(props: {
                         name="phone"
                         type="tel"
                         placeholder="e.g. +91 9876543210"
+                        value={formData.personal.phone || ""}
+                        onChange={(e) =>
+                          handleInputChange("personal", "phone", e.target.value)
+                        }
                         required
                         className="w-full"
                       />
@@ -143,6 +208,14 @@ export default async function TeacherProfile(props: {
                         name="address"
                         type="text"
                         placeholder="Your current address"
+                        value={formData.personal.address || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "personal",
+                            "address",
+                            e.target.value,
+                          )
+                        }
                         required
                         className="w-full"
                       />
@@ -157,6 +230,10 @@ export default async function TeacherProfile(props: {
                         name="city"
                         type="text"
                         placeholder="Your city"
+                        value={formData.personal.city || ""}
+                        onChange={(e) =>
+                          handleInputChange("personal", "city", e.target.value)
+                        }
                         required
                         className="w-full"
                       />
@@ -171,6 +248,10 @@ export default async function TeacherProfile(props: {
                         name="state"
                         type="text"
                         placeholder="Your state"
+                        value={formData.personal.state || ""}
+                        onChange={(e) =>
+                          handleInputChange("personal", "state", e.target.value)
+                        }
                         required
                         className="w-full"
                       />
@@ -192,6 +273,14 @@ export default async function TeacherProfile(props: {
                         id="professional_summary"
                         name="professional_summary"
                         placeholder="Provide a brief summary of your professional background and teaching philosophy"
+                        value={formData.professional.professional_summary || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "professional",
+                            "professional_summary",
+                            e.target.value,
+                          )
+                        }
                         required
                         className="w-full min-h-[100px]"
                       />
@@ -209,6 +298,14 @@ export default async function TeacherProfile(props: {
                         name="qualification"
                         type="text"
                         placeholder="e.g. Master's in Education"
+                        value={formData.professional.qualification || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "professional",
+                            "qualification",
+                            e.target.value,
+                          )
+                        }
                         required
                         className="w-full"
                       />
@@ -227,6 +324,14 @@ export default async function TeacherProfile(props: {
                         type="number"
                         min="0"
                         placeholder="e.g. 5"
+                        value={formData.professional.experience || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "professional",
+                            "experience",
+                            e.target.value,
+                          )
+                        }
                         required
                         className="w-full"
                       />
@@ -241,6 +346,14 @@ export default async function TeacherProfile(props: {
                         name="subjects"
                         type="text"
                         placeholder="e.g. Mathematics, Physics (comma separated)"
+                        value={formData.professional.subjects || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "professional",
+                            "subjects",
+                            e.target.value,
+                          )
+                        }
                         required
                         className="w-full"
                       />
@@ -258,6 +371,14 @@ export default async function TeacherProfile(props: {
                         name="grade_levels"
                         type="text"
                         placeholder="e.g. 9-12"
+                        value={formData.professional.grade_levels || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "professional",
+                            "grade_levels",
+                            e.target.value,
+                          )
+                        }
                         required
                         className="w-full"
                       />
@@ -271,6 +392,14 @@ export default async function TeacherProfile(props: {
                         id="bio"
                         name="bio"
                         placeholder="Tell us about your teaching philosophy and experience"
+                        value={formData.professional.bio || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "professional",
+                            "bio",
+                            e.target.value,
+                          )
+                        }
                         required
                         className="w-full min-h-[100px]"
                       />
@@ -300,6 +429,14 @@ export default async function TeacherProfile(props: {
                                 name="education_degree_0"
                                 type="text"
                                 placeholder="e.g. B.Ed"
+                                value={formData.education.degree_0 || ""}
+                                onChange={(e) =>
+                                  handleInputChange(
+                                    "education",
+                                    "degree_0",
+                                    e.target.value,
+                                  )
+                                }
                                 required
                                 className="w-full"
                               />
@@ -316,6 +453,14 @@ export default async function TeacherProfile(props: {
                                 name="education_institution_0"
                                 type="text"
                                 placeholder="e.g. Delhi University"
+                                value={formData.education.institution_0 || ""}
+                                onChange={(e) =>
+                                  handleInputChange(
+                                    "education",
+                                    "institution_0",
+                                    e.target.value,
+                                  )
+                                }
                                 required
                                 className="w-full"
                               />
@@ -332,6 +477,14 @@ export default async function TeacherProfile(props: {
                                 name="education_year_0"
                                 type="text"
                                 placeholder="e.g. 2018"
+                                value={formData.education.year_0 || ""}
+                                onChange={(e) =>
+                                  handleInputChange(
+                                    "education",
+                                    "year_0",
+                                    e.target.value,
+                                  )
+                                }
                                 required
                                 className="w-full"
                               />
@@ -348,6 +501,14 @@ export default async function TeacherProfile(props: {
                                 name="education_grade_0"
                                 type="text"
                                 placeholder="e.g. 85%"
+                                value={formData.education.grade_0 || ""}
+                                onChange={(e) =>
+                                  handleInputChange(
+                                    "education",
+                                    "grade_0",
+                                    e.target.value,
+                                  )
+                                }
                                 className="w-full"
                               />
                             </div>
@@ -376,6 +537,14 @@ export default async function TeacherProfile(props: {
                                 name="cert_name_0"
                                 type="text"
                                 placeholder="e.g. CTET"
+                                value={formData.education.cert_name_0 || ""}
+                                onChange={(e) =>
+                                  handleInputChange(
+                                    "education",
+                                    "cert_name_0",
+                                    e.target.value,
+                                  )
+                                }
                                 className="w-full"
                               />
                             </div>
@@ -391,6 +560,16 @@ export default async function TeacherProfile(props: {
                                 name="cert_authority_0"
                                 type="text"
                                 placeholder="e.g. CBSE"
+                                value={
+                                  formData.education.cert_authority_0 || ""
+                                }
+                                onChange={(e) =>
+                                  handleInputChange(
+                                    "education",
+                                    "cert_authority_0",
+                                    e.target.value,
+                                  )
+                                }
                                 className="w-full"
                               />
                             </div>
@@ -406,6 +585,14 @@ export default async function TeacherProfile(props: {
                                 name="cert_year_0"
                                 type="text"
                                 placeholder="e.g. 2019"
+                                value={formData.education.cert_year_0 || ""}
+                                onChange={(e) =>
+                                  handleInputChange(
+                                    "education",
+                                    "cert_year_0",
+                                    e.target.value,
+                                  )
+                                }
                                 className="w-full"
                               />
                             </div>
@@ -427,6 +614,14 @@ export default async function TeacherProfile(props: {
                         id="skills"
                         name="skills"
                         placeholder="List your skills (comma separated)"
+                        value={formData.education.skills || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "education",
+                            "skills",
+                            e.target.value,
+                          )
+                        }
                         className="w-full"
                       />
                     </div>
@@ -442,6 +637,14 @@ export default async function TeacherProfile(props: {
                         id="teaching_methodologies"
                         name="teaching_methodologies"
                         placeholder="Describe your teaching methodologies (comma separated)"
+                        value={formData.education.teaching_methodologies || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "education",
+                            "teaching_methodologies",
+                            e.target.value,
+                          )
+                        }
                         className="w-full"
                       />
                     </div>
@@ -457,6 +660,14 @@ export default async function TeacherProfile(props: {
                         id="classroom_management"
                         name="classroom_management"
                         placeholder="Describe your classroom management strategies (comma separated)"
+                        value={formData.education.classroom_management || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "education",
+                            "classroom_management",
+                            e.target.value,
+                          )
+                        }
                         className="w-full"
                       />
                     </div>
@@ -477,6 +688,14 @@ export default async function TeacherProfile(props: {
                         id="lesson_planning"
                         name="lesson_planning"
                         placeholder="Describe your approach to lesson planning and curriculum development"
+                        value={formData.additional.lesson_planning || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "additional",
+                            "lesson_planning",
+                            e.target.value,
+                          )
+                        }
                         className="w-full"
                       />
                     </div>
@@ -492,6 +711,14 @@ export default async function TeacherProfile(props: {
                         id="tech_proficiency"
                         name="tech_proficiency"
                         placeholder="List technologies you're proficient with (comma separated)"
+                        value={formData.additional.tech_proficiency || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "additional",
+                            "tech_proficiency",
+                            e.target.value,
+                          )
+                        }
                         className="w-full"
                       />
                     </div>
@@ -504,6 +731,14 @@ export default async function TeacherProfile(props: {
                         id="research"
                         name="research"
                         placeholder="List any research or publications (if any)"
+                        value={formData.additional.research || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "additional",
+                            "research",
+                            e.target.value,
+                          )
+                        }
                         className="w-full"
                       />
                     </div>
@@ -519,6 +754,14 @@ export default async function TeacherProfile(props: {
                         id="workshops"
                         name="workshops"
                         placeholder="List workshops and training programs you've attended"
+                        value={formData.additional.workshops || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "additional",
+                            "workshops",
+                            e.target.value,
+                          )
+                        }
                         className="w-full"
                       />
                     </div>
@@ -534,6 +777,14 @@ export default async function TeacherProfile(props: {
                         id="extracurricular"
                         name="extracurricular"
                         placeholder="Describe your involvement in extracurricular activities"
+                        value={formData.additional.extracurricular || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "additional",
+                            "extracurricular",
+                            e.target.value,
+                          )
+                        }
                         className="w-full"
                       />
                     </div>
@@ -546,6 +797,14 @@ export default async function TeacherProfile(props: {
                         id="awards"
                         name="awards"
                         placeholder="List any awards or recognitions you've received"
+                        value={formData.additional.awards || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "additional",
+                            "awards",
+                            e.target.value,
+                          )
+                        }
                         className="w-full"
                       />
                     </div>
@@ -561,6 +820,14 @@ export default async function TeacherProfile(props: {
                         id="memberships"
                         name="memberships"
                         placeholder="List any professional organizations you're a member of"
+                        value={formData.additional.memberships || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "additional",
+                            "memberships",
+                            e.target.value,
+                          )
+                        }
                         className="w-full"
                       />
                     </div>
@@ -576,6 +843,14 @@ export default async function TeacherProfile(props: {
                         id="references"
                         name="references"
                         placeholder="Provide references (name, position, contact)"
+                        value={formData.additional.references || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "additional",
+                            "references",
+                            e.target.value,
+                          )
+                        }
                         className="w-full"
                       />
                     </div>

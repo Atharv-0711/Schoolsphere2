@@ -78,6 +78,15 @@ export default async function Dashboard() {
                     <InfoIcon className="h-5 w-5 mb-1" />
                     Help Center
                   </button>
+                  {userRole === "teacher" && (
+                    <a
+                      href="/teacher/profile/edit"
+                      className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center"
+                    >
+                      <UserCircle className="h-5 w-5 mb-1" />
+                      Update Resume
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
