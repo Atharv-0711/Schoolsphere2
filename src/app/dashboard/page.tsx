@@ -1,5 +1,10 @@
 import DashboardNavbar from "@/components/dashboard-navbar";
-import { InfoIcon, UserCircle, GraduationCap } from "lucide-react";
+import {
+  InfoIcon,
+  UserCircle,
+  GraduationCap,
+  CalendarIcon,
+} from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "../../../supabase/server";
 
@@ -70,22 +75,43 @@ export default async function Dashboard() {
                   Quick Actions
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
-                  <button className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center">
-                    <GraduationCap className="h-5 w-5 mb-1" />
-                    View Courses
-                  </button>
+                  {userRole === "student" ? (
+                    <a
+                      href="https://classroom.google.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center"
+                    >
+                      <GraduationCap className="h-5 w-5 mb-1" />
+                      View Courses
+                    </a>
+                  ) : (
+                    <button className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center">
+                      <GraduationCap className="h-5 w-5 mb-1" />
+                      View Courses
+                    </button>
+                  )}
                   <button className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center">
                     <InfoIcon className="h-5 w-5 mb-1" />
                     Help Center
                   </button>
                   {userRole === "teacher" && (
-                    <a
-                      href="/teacher/profile/edit"
-                      className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center"
-                    >
-                      <UserCircle className="h-5 w-5 mb-1" />
-                      Update Resume
-                    </a>
+                    <>
+                      <a
+                        href="/teacher/profile/edit"
+                        className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center"
+                      >
+                        <UserCircle className="h-5 w-5 mb-1" />
+                        Update Resume
+                      </a>
+                      <a
+                        href="/teacher/attendance"
+                        className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center"
+                      >
+                        <CalendarIcon className="h-5 w-5 mb-1" />
+                        Mark Attendance
+                      </a>
+                    </>
                   )}
                 </div>
               </div>
