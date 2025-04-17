@@ -161,6 +161,7 @@ export const saveTeacherProfileAction = async (formData: FormData) => {
   const address = formData.get("address")?.toString() || "";
   const city = formData.get("city")?.toString() || "";
   const state = formData.get("state")?.toString() || "";
+  const country = formData.get("country")?.toString() || "";
 
   // Log form data for debugging
   console.log("Form data validation:", {
@@ -175,6 +176,7 @@ export const saveTeacherProfileAction = async (formData: FormData) => {
     address,
     city,
     state,
+    country,
   });
 
   // Check if all required fields are present
@@ -189,7 +191,8 @@ export const saveTeacherProfileAction = async (formData: FormData) => {
     !phone ||
     !address ||
     !city ||
-    !state
+    !state ||
+    !country
   ) {
     // Log which fields are missing
     const missingFields = [];
@@ -204,6 +207,7 @@ export const saveTeacherProfileAction = async (formData: FormData) => {
     if (!address) missingFields.push("address");
     if (!city) missingFields.push("city");
     if (!state) missingFields.push("state");
+    if (!country) missingFields.push("country");
 
     console.error("Missing fields:", missingFields);
 
@@ -221,6 +225,7 @@ export const saveTeacherProfileAction = async (formData: FormData) => {
     address,
     city,
     state,
+    country,
   };
 
   // Educational qualifications

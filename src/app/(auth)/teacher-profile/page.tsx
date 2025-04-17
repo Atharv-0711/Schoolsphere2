@@ -482,6 +482,28 @@ export default function TeacherProfile({
                         className="w-full"
                       />
                     </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="country" className="text-sm font-medium">
+                        Country
+                      </Label>
+                      <Input
+                        id="country"
+                        name="country"
+                        type="text"
+                        placeholder="Your country"
+                        value={formData.personal.country || ""}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "personal",
+                            "country",
+                            e.target.value,
+                          )
+                        }
+                        required
+                        className="w-full"
+                      />
+                    </div>
                   </div>
                 </TabsContent>
 

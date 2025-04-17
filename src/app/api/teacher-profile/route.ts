@@ -68,7 +68,9 @@ export async function POST(request: NextRequest) {
             address: formData.address || "",
             city: formData.city || "",
             state: formData.state || "",
+            country: formData.country || "",
           },
+          country: formData.country || "",
         };
         break;
       case "professional":

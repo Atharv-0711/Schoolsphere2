@@ -76,6 +76,58 @@ export default async function Dashboard() {
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
                   {userRole === "student" ? (
+                    <>
+                      <a
+                        href="/student/marks"
+                        className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center"
+                      >
+                        <GraduationCap className="h-5 w-5 mb-1" />
+                        View Marks
+                      </a>
+                      <a
+                        href="/student/attendance"
+                        className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center"
+                      >
+                        <CalendarIcon className="h-5 w-5 mb-1" />
+                        View Attendance
+                      </a>
+                      <a
+                        href="/student/calendar"
+                        className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center"
+                      >
+                        <CalendarIcon className="h-5 w-5 mb-1" />
+                        Calendar
+                      </a>
+                      <a
+                        href="https://classroom.google.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center"
+                      >
+                        <GraduationCap className="h-5 w-5 mb-1" />
+                        View Courses
+                      </a>
+                    </>
+                  ) : userRole === "parent" ? (
+                    <>
+                      <a
+                        href="/meetings/schedule"
+                        className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center"
+                      >
+                        <CalendarIcon className="h-5 w-5 mb-1" />
+                        Book Teacher Meeting
+                      </a>
+                      <a
+                        href="https://classroom.google.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center"
+                      >
+                        <GraduationCap className="h-5 w-5 mb-1" />
+                        View Courses
+                      </a>
+                    </>
+                  ) : (
                     <a
                       href="https://classroom.google.com"
                       target="_blank"
@@ -85,11 +137,6 @@ export default async function Dashboard() {
                       <GraduationCap className="h-5 w-5 mb-1" />
                       View Courses
                     </a>
-                  ) : (
-                    <button className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center">
-                      <GraduationCap className="h-5 w-5 mb-1" />
-                      View Courses
-                    </button>
                   )}
                   <button className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center">
                     <InfoIcon className="h-5 w-5 mb-1" />
@@ -110,6 +157,13 @@ export default async function Dashboard() {
                       >
                         <CalendarIcon className="h-5 w-5 mb-1" />
                         Mark Attendance
+                      </a>
+                      <a
+                        href="/teacher/school-selection"
+                        className="p-3 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors flex flex-col items-center justify-center"
+                      >
+                        <InfoIcon className="h-5 w-5 mb-1" />
+                        Connect to School
                       </a>
                     </>
                   )}
