@@ -49,6 +49,26 @@ export default async function Navbar() {
         <div className="flex gap-4 items-center">
           {user ? (
             <>
+              <div className="hidden md:flex items-center gap-4">
+                <Link
+                  href="/student/marks"
+                  className="text-gray-600 hover:text-blue-600 font-medium"
+                >
+                  Marks
+                </Link>
+                <Link
+                  href="/student/attendance"
+                  className="text-gray-600 hover:text-blue-600 font-medium"
+                >
+                  Attendance
+                </Link>
+                <Link
+                  href="/student/calendar"
+                  className="text-gray-600 hover:text-blue-600 font-medium"
+                >
+                  Calendar
+                </Link>
+              </div>
               <Link
                 href="/dashboard"
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
