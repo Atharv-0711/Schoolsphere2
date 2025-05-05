@@ -35,23 +35,34 @@ export default async function AttendancePage() {
   }
 
   // For demo purposes, if no classes exist, create a dummy class
+  let dummyClass = null;
   if (!classes || classes.length === 0) {
-    // This would normally be done through a proper class creation flow
-    const { data: dummyClass, error: dummyClassError } = await supabase
-      .from("classes")
-      .insert({
-        name: "Mathematics 101",
-        grade_level: "Grade 9",
-        teacher_id: user.id,
-        school_year: "2023-2024",
-      })
-      .select()
-      .single();
+    try {
+      // This would normally be done through a proper class creation flow
+      const { data: newClass, error: dummyClassError } = await supabase
+        .from("classes")
+        .insert({
+          name: "Mathematics 101",
+          grade_level: "Grade 9",
+          teacher_id: user.id,
+          school_year: "2023-2024",
+        })
+        .select()
+        .single();
 
-    if (dummyClassError) {
-      console.error("Error creating dummy class:", dummyClassError);
+      if (dummyClassError) {
+        console.error("Error creating dummy class:", dummyClassError);
+      } else {
+        dummyClass = newClass;
+      }
+    } catch (error) {
+      console.error("Exception creating dummy class:", error);
     }
   }
+
+  // Use either the fetched classes or the newly created dummy class
+  const displayClasses =
+    classes?.length > 0 ? classes : dummyClass ? [dummyClass] : [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -74,9 +85,9 @@ export default async function AttendancePage() {
         </div>
       </div>
 
-      {classes && classes.length > 0 ? (
+      {displayClasses.length > 0 ? (
         <div className="grid grid-cols-1 gap-6">
-          {classes.map((classItem) => (
+          {displayClasses.map((classItem) => (
             <Card key={classItem.id} className="shadow-sm">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
